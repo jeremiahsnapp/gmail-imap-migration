@@ -1,6 +1,6 @@
 [general]
 accounts = username
-ui = ttyui
+ui = Blinkenlights
 
 [Account username]
 localrepository = Local
