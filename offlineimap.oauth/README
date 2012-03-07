@@ -1,3 +1,8 @@
 https://github.com/nicolas33/offlineimap
 
+configuration is described in the file offlineimap/offlineimap.conf
+
+for some reason i've noticed that offlineimap isn't always able to 'select' the account's folders
+but i think it always works at least the second time.
+
 offlineimap -l username.log
