@@ -1,0 +1,54 @@
+diff --git a/offlineimap/imapserver.py b/offlineimap/imapserver.py
+index b7f062d..91f51fd 100644
+--- a/offlineimap/imapserver.py
++++ b/offlineimap/imapserver.py
+@@ -133,6 +133,35 @@ class IMAPServer:
+         self.ui.debug('imap', 'md5handler: returning %s' % retval)
+         return retval
+ 
++    def xoauth(self, imapobj):
++        import urllib
++        import oauth.oauth as oauth
++
++        CONSUMER_KEY = ''
++        CONSUMER_SECRET = ''
++        IMAP_URL = 'https://mail.google.com/mail/b/' + self.username + '/imap/'
++
++        # Setup 2 legged OAuth consumer based on our admin "credentials"
++        consumer = oauth.OAuthConsumer(CONSUMER_KEY, CONSUMER_SECRET)
++
++        params = {'xoauth_requestor_id': self.username}
++
++        # Construct the request manually and sign it using HMAC-SHA1
++        # Note: The params dictionary needs to be passed in separately from the base URL
++        request = oauth.OAuthRequest.from_consumer_and_token(consumer, http_method='GET', http_url=IMAP_URL, parameters=params)
++        request.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1(), consumer, None)
++
++        sasl_oauth_parameters = 'oauth_consumer_key="' + request.get_parameter('oauth_consumer_key') + '",'
++        sasl_oauth_parameters += 'oauth_nonce="' + str(request.get_parameter('oauth_nonce')) + '",'
++        sasl_oauth_parameters += 'oauth_signature="' + request.get_parameter('oauth_signature') + '",'
++        sasl_oauth_parameters += 'oauth_signature_method="' + request.get_parameter('oauth_signature_method') + '",'
++        sasl_oauth_parameters += 'oauth_timestamp="' + str(request.get_parameter('oauth_timestamp')) + '",'
++        sasl_oauth_parameters += 'oauth_version="' + request.get_parameter('oauth_version') + '"'
++
++        sasl_request = 'GET ' + IMAP_URL + '?xoauth_requestor_id=' + urllib.quote(self.username, safe='~') + ' ' + sasl_oauth_parameters
++
++        return sasl_request
++
+     def plainauth(self, imapobj):
+         self.ui.debug('imap', 'Attempting plain authentication')
+         imapobj.login(self.username, self.getpassword())
+@@ -261,6 +290,13 @@ class IMAPServer:
+                                                          self.md5handler)
+                                 except imapobj.error, val:
+                                     self.plainauth(imapobj)
++                            elif 'AUTH=XOAUTH' in imapobj.capabilities:
++                                self.ui.debug('imap',
++                                           'Attempting XOAUTH authentication')
++                                try:
++                                    imapobj.authenticate('XOAUTH', self.xoauth)
++                                except imapobj.error, val:
++                                    self.plainauth(imapobj)
+                             else:
+                                 # Use plaintext login, unless
+                                 # LOGINDISABLED (RFC2595)

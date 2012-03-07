@@ -1,0 +1,3 @@
+https://github.com/imapsync/imapsync
+
+sudo apt-get install libmail-imapclient-perl libnet-oauth-perl

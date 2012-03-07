@@ -1,0 +1,54 @@
+diff --git a/imapsync b/imapsync
+index e390dfc..8af7249 100755
+--- a/imapsync
++++ b/imapsync
+@@ -1812,6 +1812,7 @@ sub login_imap {
+         }
+ 
+ 	$imap->Authcallback(\&plainauth) if $authmech eq "PLAIN";
++	$imap->Authcallback(\&xoauth) if $authmech eq "XOAUTH";
+ 	
+ 
+         if ($proxyauth) {
+@@ -1846,6 +1847,41 @@ sub login_imap {
+ }
+ 
+ 
++sub xoauth() {
++    my $code = shift;
++    my $imap = shift;
++
++    use Net::OAuth;
++    use URI::Escape;
++    use MIME::Base64;
++    use Digest::MD5 qw(md5_base64);
++
++    my $domain = '';
++    my $consumer_key = $domain;
++    my $consumer_secret = '';
++    my $username = $imap->User();
++    my $request_url = 'https://mail.google.com/mail/b/'.$username.'@'.$domain.'/imap/';
++
++    my $oauth = Net::OAuth->request('consumer')->new(
++        consumer_key => $consumer_key,
++        consumer_secret => $consumer_secret,
++        request_url => $request_url,
++        request_method => 'GET',
++        signature_method => 'HMAC-SHA1',
++        timestamp => time(),
++        nonce => md5_base64(time()),
++        extra_params => {
++            'xoauth_requestor_id' => $username.'@'.$domain,
++        },
++    );
++
++    $oauth->sign;
++
++    my $sig = $oauth->to_authorization_header;
++    $sig =~ s/^OAuth/'GET '.$oauth->request_url.'?xoauth_requestor_id='.uri_escape($username.'@'.$domain)/e;
++    return encode_base64($sig, '');
++}
++
+ sub plainauth() {
+         my $code = shift;
+         my $imap = shift;

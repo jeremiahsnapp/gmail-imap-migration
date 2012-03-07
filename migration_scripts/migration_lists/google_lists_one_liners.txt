@@ -1,0 +1,73 @@
+cd master_lists/
+ldapsearch -H ldap://192.168.1.5:389 -b 'ou=people,dc=example,dc=com' -D 'uid=zimbra,cn=admins,cn=zimbra' -W -Z -x '(&(objectClass=zimbraAccount)(!(objectClass=zimbraCalendarResource)))' > zimbra_accounts.ldif
+
+
+cd master_lists/aliases/
+awk '/^uid:/{uid=$2}/^zimbraMailAlias:/{print $2,uid}' ../zimbra_accounts.ldif > zimbra_aliases.txt
+xargs -I{} grep "{}" zimbra_aliases.txt < ../../migrate_google_accounts.txt > regular_aliases.txt
+xargs -I{} grep "{}" zimbra_aliases.txt < ../special.txt > special_aliases.txt
+awk '{print $2}' regular_aliases.txt special_aliases.txt |sort -u > aliases
+awk '{print $2}' zimbra_aliases.txt |sort -u > all_aliases
+diff -u all_aliases aliases |less
+
+
+
+awk '{system("/root/migration_scripts/create_nickname.py " $2 " " gensub("@example.com","","g",$1))}' regular_aliases.txt > regular_aliases_results.txt 2>&1
+
+
+
+cd master_lists/
+awk '/^uid:/{print $2}' zimbra_accounts.ldif | sort > all_zimbra_users.txt
+
+gms.txt provides a list of usernames and the size of their zimbra mailbox
+example gms.txt:
+first.last 983452
+first2.last2 42652
+
+don’t forget to make sure gms.txt has same accounts as all_zimbra_users.txt
+
+~/gdata_scripts/google_retrieve_all_users.py | sort > all_google_users.txt
+
+
+cd ~/lists/master_lists/
+cat google_skip.txt in_google_not_in_zimbra.txt | sort > skip_migrate_google.txt
+
+comm -2 -3 all_google_users.txt skip_migrate_google.txt > ../migrate_google_accounts.txt
+
+
+cd ..
+# make sure you compare line count of -f file and result file
+# because sometimes an account is incorrectly matched for our purposes
+# of course if you don't mind remigrating that account then don't worry about it
+grep -F -f migrate_google_accounts.txt master_lists/gms.txt | sort -nr -k2 > migrate_google_accounts_by_size.txt
+
+sed -n 1~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.1
+sed -n 2~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.2
+sed -n 3~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.3
+sed -n 4~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.4
+sed -n 5~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.5
+sed -n 6~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.6
+sed -n 7~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.7
+sed -n 8~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.8
+sed -n 9~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.9
+sed -n 10~10p migrate_google_accounts_by_size.txt > migrate_google_accounts_by_size.txt.10
+
+----
+
+cat ../migrate?.txt | sort -u > previous_migration.txt
+
+comm -1 -3 previous_migration.txt migrate_google_accounts.txt > missed.txt
+
+# make sure you compare line count of -f file and result file
+# because sometimes an account is incorrectly matched for our purposes
+# of course if you don't mind remigrating that account then don't worry about it
+grep -F -f missed.txt master_lists/gms.txt > missed_by_size.txt
+
+----
+
+comm -2 -3 master_lists/all_zimbra_users.txt migrate_google_accounts.txt > skipped_zimbra_accounts.txt
+comm -2 -3 skipped_zimbra_accounts.txt master_lists/skip_migrate_google.txt > unplanned_skipped_zimbra_accounts.txt
+
+----
+
+perl -alne 'if ( ( @F[2] =~ /mess|conv/ ) && ( grep /@example.com:/, @F ) ) { print join " ", @F[0,5..@F-1] }' gaf.txt > shared_folders.txt

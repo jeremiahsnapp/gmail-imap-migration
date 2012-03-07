@@ -1,0 +1,15 @@
+[general]
+accounts = username
+ui = ttyui
+
+[Account username]
+localrepository = Local
+remoterepository = Remote
+
+[Repository Local]
+type = Maildir
+localfolders = ~/username
+
+[Repository Remote]
+type = Gmail
+remoteuser = username@example.edu

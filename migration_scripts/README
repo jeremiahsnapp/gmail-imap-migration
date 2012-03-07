@@ -1,0 +1,9 @@
+apt-get install mercurial
+hg clone https://code.google.com/p/gdata-python-client/
+ls
+cd gdata-python-client/
+ls
+less INSTALL.txt 
+python setup.py install
+ls -l /usr/local/lib/python2.6/dist-packages/
+
