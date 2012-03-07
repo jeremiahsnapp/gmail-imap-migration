@@ -151,4 +151,4 @@ if ($migration_dry eq 'dry') {
 #print $imapsync_args;
 #exit;
 
-system ('../imapsync/imapsync '.$imapsync_args);
+system ('../../imapsync/imapsync '.$imapsync_args);
